@@ -106,37 +106,84 @@ removed memberships stay valid until expiry. Principle: **least privilege**.
 
 ## 3. Roles & permissions
 
-<!-- Fill each cell with ✅ / ❌ / ⚠️ (⚠️ = allowed with a condition; write the condition in Notes) -->
+✅ allowed · ❌ not allowed · ⚠️ allowed with the condition in Notes.
+Each row is a **permission**; code checks `can('<permission>')`, never role names.
 
-| Action | Owner | Manager (Bilal) | Munshi | Store keeper | Accountant (Tariq) | Notes |
-|---|---|---|---|---|---|---|
-| Edit factory profile / logo |  |  |  |  |  |  |
-| Invite (add) staff |  |  |  |  |  |  |
-| Deactivate staff |  |  |  |  |  |  |
-| Reset a staff PIN |  |  |  |  |  |  |
-| Log out all devices of a user |  |  |  |  |  |  |
-| Change a user's role |  |  |  |  |  |  |
-| Deactivate or remove the OWNER |  |  |  |  |  |  |
-| Create sale invoice |  |  |  |  |  |  |
-| Receive payment / record trade-in |  |  |  |  |  |  |
-| View customer khata (ledger) |  |  |  |  |  |  |
-| View sale prices |  |  |  |  |  |  |
-| View purchase / cost rates |  |  |  |  |  |  |
-| View profit reports |  |  |  |  |  |  |
-| Stock in / out entry |  |  |  |  |  |  |
-| View stock quantities |  |  |  |  |  |  |
-| Stock adjustment / write-off |  |  |  |  |  |  |
-| Reverse (cancel) an invoice |  |  |  |  |  |  |
-| View audit log |  |  |  |  |  |  |
+| Permission | Action | Owner | Manager (Bilal) | Munshi | Store keeper | Accountant (Tariq) | Notes |
+|---|---|---|---|---|---|---|---|
+| `tenant.profile.edit` | Edit factory profile / logo | ✅ | ✅ | ❌ | ❌ | ❌ | |
+| `staff.invite` | Invite (add) staff | ✅ | ⚠️ | ❌ | ❌ | ❌ | Manager can only invite roles below MANAGER |
+| `staff.deactivate` | Deactivate staff | ✅ | ⚠️ | ❌ | ❌ | ❌ | Manager cannot deactivate the owner |
+| `staff.pin.reset` | Reset a staff PIN | ✅ | ⚠️ | ❌ | ❌ | ❌ | Manager cannot reset the owner's PIN |
+| `user.sessions.revoke` | Log out all devices of a user | ✅ | ⚠️ | ❌ | ❌ | ❌ | Manager cannot log out the owner |
+| `staff.role.change` | Change a user's role | ✅ | ⚠️ | ❌ | ❌ | ❌ | Only to roles below own; never to OWNER (rule C) |
+| `tenant.ownership.transfer` | Transfer / remove the OWNER | ⚠️ | ❌ | ❌ | ❌ | ❌ | Owner only, confirmed by WhatsApp OTP (rule B) |
+| `invoice.create` | Create sale invoice | ✅ | ✅ | ✅ | ❌ | ❌ | Accountant is view-only |
+| `payment.receive` | Receive payment / record trade-in | ✅ | ✅ | ✅ | ❌ | ❌ | |
+| `khata.view` | View customer khata (ledger) | ✅ | ✅ | ✅ | ❌ | ✅ | |
+| `price.sale.view` | View sale prices | ✅ | ✅ | ✅ | ❌ | ✅ | |
+| `price.cost.view` | View purchase / cost rates | ✅ | ✅ | ❌ | ❌ | ✅ | API must omit cost fields, not just hide them in UI |
+| `report.profit.view` | View profit reports | ✅ | ✅ | ❌ | ❌ | ✅ | Accountant needs P&L for the books |
+| `stock.move` | Stock in / out entry | ✅ | ✅ | ✅ | ✅ | ❌ | |
+| `stock.view` | View stock quantities | ✅ | ✅ | ✅ | ✅ | ✅ | Store keeper sees quantities only, no rates |
+| `stock.adjust` | Stock adjustment / write-off | ✅ | ✅ | ⚠️ | ❌ | ❌ | Munshi can *request*; owner/manager approves |
+| `invoice.reverse` | Reverse (cancel) an invoice | ✅ | ✅ | ❌ | ❌ | ❌ | Reason required; logged |
+| `audit.view` | View audit log | ✅ | ✅ | ❌ | ❌ | ✅ | Read-only |
+
+### 3.1 Rules
+1. **Tenant check first, permission check second.** A valid permission in tenant A means nothing in tenant B.
+2. **Least privilege.** Each role gets only what its job needs. The accountant is **view-only** (decided 2026-09-29).
+3. **Separation of duties.** Whoever creates a money or stock record cannot cancel or write it off alone
+   (invoice reversal, stock write-off).
+4. **Rule C (no privilege escalation):** a user can only grant roles *below* their own. Nobody can grant OWNER.
+   _Proposed by Claude. Saad to confirm._
+5. **Rule B (ownership transfer):** only the current owner can transfer ownership, confirmed by WhatsApp OTP.
+   If the owner is unavailable (sold / deceased), a PLATFORM_ADMIN transfers it after manual document
+   verification. This is a support process, not an in-app feature, for the MVP.
+   _Proposed by Claude. Saad to confirm._
+6. Changing what a role can do = editing the role → permissions mapping, not code.
 
 ## 4. Feature 1: Tenant registration & login
 
-### FR-AUTH-01: Factory owner registers a new tenant
-**User story:** As a factory owner, I want to sign up my factory so that my staff and I can start using KarkhanaOS.
+### FR-AUTH-01: Factory owner registers a new tenant  _(worked example)_
+**User story:** As a factory owner, I want to sign up my factory myself so that my staff and I can start using KarkhanaOS.
 **Acceptance criteria:**
-- Given …, when …, then …
+- Given a mobile number not registered as an OWNER, when the owner submits factory name, owner name,
+  mobile, city, address and a subdomain, then the system sends a WhatsApp OTP to that mobile.
+- Given a correct OTP within 5 minutes, then a **tenant**, a **user** (if the mobile is new) and an
+  **OWNER membership** are created together (one transaction), and the owner is logged in to that tenant.
+- Given a subdomain that is taken, reserved (`www`, `api`, `admin`, `app`) or invalid (not 3–30 chars of
+  a–z, 0–9, `-`), then registration is rejected with a clear message before the OTP is sent.
+- Given an existing user (e.g. Tariq sahab) registering his own factory, then no new user is created;
+  only a new tenant + OWNER membership are added to his existing user.
+- Given 3 wrong OTPs, then that OTP is invalidated and a new one must be requested.
+- Logo and NTN are optional and can be added later from the factory profile.
 
-**Out of scope (MVP):**
+**Out of scope (MVP):** email sign-up, subscription / payment at sign-up, custom domains.
+
+<!-- ✍️ Saad: write FR-AUTH-02 to FR-AUTH-09 in the same format. Titles are given; you write the
+     user story + acceptance criteria. Use Section 1 answers and Section 3 rules. -->
+
+### FR-AUTH-02: Login with mobile number + PIN
+<!-- Hint: what if the user has memberships in several tenants? What if the membership is inactive? -->
+
+### FR-AUTH-03: Owner / manager invites a staff member (WhatsApp link, staff sets own PIN)
+<!-- Hint: how long is the invite link valid? What if the mobile already has a user? Rule C. -->
+
+### FR-AUTH-04: Owner / manager resets a staff member's PIN
+
+### FR-AUTH-05: Owner recovers own PIN via WhatsApp OTP
+
+### FR-AUTH-06: Deactivate a staff member (takes effect within 1 minute)
+<!-- Hint: what happens to their open sessions? Their past invoices? -->
+
+### FR-AUTH-07: Log out all devices of a user (stolen phone)
+
+### FR-AUTH-08: Switch tenant (users with multiple memberships)
+<!-- You already designed this in Drill 2. -->
+
+### FR-AUTH-09: Failed PIN attempts
+<!-- Hint: a 4-digit PIN has only 10,000 combinations. How fast could a script try them all? -->
 
 ## 5. Feature 2: Tenant isolation & tenant profile
 
