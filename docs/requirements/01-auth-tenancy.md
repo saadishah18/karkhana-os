@@ -165,7 +165,21 @@ Each row is a **permission**; code checks `can('<permission>')`, never role name
      user story + acceptance criteria. Use Section 1 answers and Section 3 rules. -->
 
 ### FR-AUTH-02: Login with mobile number + PIN
-<!-- Hint: what if the user has memberships in several tenants? What if the membership is inactive? -->
+**User story:** As a staff member, I want to log in with my mobile number and PIN, so that I can do my daily work without needing an email.
+**Acceptance criteria:**
+- Given a user with exactly one active membership enters the correct mobile and PIN, when they press Login,
+  then the server issues a token for that tenant and they land on their dashboard, with a menu showing
+  only the pages their permissions allow.
+- Given a wrong mobile number **or** a wrong PIN, when they press Login, then the app shows
+  "Mobile number or PIN is incorrect", the same message in both cases (prevents **user enumeration**).
+- Given a user whose memberships are all deactivated, when they log in with the correct mobile and PIN,
+  then they are not logged in and see "Your account has been disabled. Please contact your factory owner."
+  This message appears only **after** the PIN is verified, so it never reveals which numbers are registered.
+- Given a user with several active memberships (e.g. Tariq sahab), when they log in, then they see a list
+  of **only their active factories**; choosing one issues a token for that tenant (see FR-AUTH-08).
+  Deactivated factories do not appear in the list.
+
+**Out of scope (MVP):** "remember this device", biometric / fingerprint login.
 
 ### FR-AUTH-03: Owner / manager invites a staff member (WhatsApp link, staff sets own PIN)
 <!-- Hint: how long is the invite link valid? What if the mobile already has a user? Rule C. -->
