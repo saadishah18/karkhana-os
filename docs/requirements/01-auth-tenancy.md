@@ -194,7 +194,22 @@ Each row is a **permission**; code checks `can('<permission>')`, never role name
 ### FR-AUTH-07: Log out all devices of a user (stolen phone)
 
 ### FR-AUTH-08: Switch tenant (users with multiple memberships)
-<!-- You already designed this in Drill 2. -->
+**User story:** As an accountant working for several factories, I want to switch between them quickly,
+so that I can work on each factory's books without logging out and in again.
+**Acceptance criteria:**
+- The **current factory name is always shown in the navbar**, so the user always knows which factory
+  they are working in (prevents recording entries in the wrong factory).
+- Given a user with more than one active membership, when they tap the factory name, then they see a list
+  of their **active** factories with the current one ticked ✓. Deactivated memberships do not appear.
+  (Users with only one factory see the name but no switcher.)
+- Given the user picks another factory, then the server checks that the membership is still active and
+  issues a **new token** for that tenant with the user's **role in that tenant**; the old token is
+  discarded by the app, and the dashboard and menu are rebuilt from the new permissions.
+- Given the membership was deactivated after the user logged in, when they try to switch, then the switch
+  fails with "Your account has been disabled for this factory" and they stay in the current factory.
+- The old tenant's token is never accepted for the new tenant's data (see Drill 1 and Drill 2 → 403).
+
+**Out of scope (MVP):** viewing several factories side by side, combined reports across factories.
 
 ### FR-AUTH-09: Failed PIN attempts
 **Why:** a 4-digit PIN has 10,000 combinations. At 10 tries/second, a script tries all of them in
