@@ -95,13 +95,39 @@ Notes: 401 = not authenticated, 403 = authenticated but not allowed.
 Tenant isolation is checked first; role permissions come second.
 
 **Drill 2: Tariq sahab (active in both tenants) uses his rashid token on `fans`.**
-_Pending: Saad to answer. Which tenant was his token issued for? How does he switch?_
+Saad's answer: the token must be tied to the specific factory, so the middleware accepts him only there.
+Review: right idea; the term "factory signature" was wrong. One platform signing key signs every token;
+the factory is a `tenantId` **claim** inside the token.
+1. His token is scoped to `t_rashid` → on `fans` = **403**, even though he has an active fans membership.
+2. To switch: `POST /auth/switch-tenant { tenantId }` → server checks active membership →
+   issues a **new access token** with `tenantId: t_fans` and his **role at fans**.
+Why not one token listing all tenants: roles differ per tenant; bigger blast radius if stolen;
+removed memberships stay valid until expiry. Principle: **least privilege**.
 
 ## 3. Roles & permissions
 
-| Action | Owner | Manager (Bilal) | Munshi | Store keeper | Accountant (Tariq) |
-|---|---|---|---|---|---|
-|  |  |  |  |  |  |
+<!-- Fill each cell with ✅ / ❌ / ⚠️ (⚠️ = allowed with a condition; write the condition in Notes) -->
+
+| Action | Owner | Manager (Bilal) | Munshi | Store keeper | Accountant (Tariq) | Notes |
+|---|---|---|---|---|---|---|
+| Edit factory profile / logo |  |  |  |  |  |  |
+| Invite (add) staff |  |  |  |  |  |  |
+| Deactivate staff |  |  |  |  |  |  |
+| Reset a staff PIN |  |  |  |  |  |  |
+| Log out all devices of a user |  |  |  |  |  |  |
+| Change a user's role |  |  |  |  |  |  |
+| Deactivate or remove the OWNER |  |  |  |  |  |  |
+| Create sale invoice |  |  |  |  |  |  |
+| Receive payment / record trade-in |  |  |  |  |  |  |
+| View customer khata (ledger) |  |  |  |  |  |  |
+| View sale prices |  |  |  |  |  |  |
+| View purchase / cost rates |  |  |  |  |  |  |
+| View profit reports |  |  |  |  |  |  |
+| Stock in / out entry |  |  |  |  |  |  |
+| View stock quantities |  |  |  |  |  |  |
+| Stock adjustment / write-off |  |  |  |  |  |  |
+| Reverse (cancel) an invoice |  |  |  |  |  |  |
+| View audit log |  |  |  |  |  |  |
 
 ## 4. Feature 1: Tenant registration & login
 
