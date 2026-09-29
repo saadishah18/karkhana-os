@@ -197,7 +197,27 @@ Each row is a **permission**; code checks `can('<permission>')`, never role name
 <!-- You already designed this in Drill 2. -->
 
 ### FR-AUTH-09: Failed PIN attempts
-<!-- Hint: a 4-digit PIN has only 10,000 combinations. How fast could a script try them all? -->
+**Why:** a 4-digit PIN has 10,000 combinations. At 10 tries/second, a script tries all of them in
+~17 minutes (average hit in ~8 minutes). Without protection, any account can be broken during one cup of chai.
+
+**User story:** As a factory owner, I want repeated wrong PINs to be slowed down, so that nobody can guess
+their way into my factory's account, and nobody can lock me out on purpose either.
+**Acceptance criteria:**
+- Given 5 wrong PINs in a row for one mobile number, when a 6th attempt is made, then login for that number
+  is blocked for **1 minute**; further failures increase the block (1 min → 5 min → 30 min → 2 hours)
+  (**progressive backoff**). A successful login resets the counter.
+- The block is **temporary, never permanent**, so an attacker cannot lock the owner out every day
+  (**lockout abuse**).
+- Given more than 20 login attempts from the same IP address within 1 minute, across any numbers,
+  then further attempts from that IP are rejected for a short period (**rate limiting** against
+  **password spraying**: one common PIN tried on many numbers).
+- Given a user setting or resetting a PIN, when they choose a weak PIN (e.g. 0000, 1111, 1234, 1212, 4321,
+  repeated or sequential digits), then it is rejected with "Please choose a less common PIN."
+- Given a user's login gets blocked, then the tenant owner receives a WhatsApp alert.
+- While blocked, the login screen shows "Too many attempts. Try again in N minutes"; it never says
+  whether the number exists.
+
+**Out of scope (MVP):** CAPTCHA, device fingerprinting.
 
 ## 5. Feature 2: Tenant isolation & tenant profile
 
