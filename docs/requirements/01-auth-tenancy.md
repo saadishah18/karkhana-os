@@ -226,11 +226,38 @@ they can get back to work without me ever knowing their PIN.
 **Out of scope (MVP):** SMS delivery, temporary PINs.
 
 ### FR-AUTH-05: Owner recovers own PIN via WhatsApp OTP
+**User story:** As a factory owner who forgot my PIN, I want to recover it myself with a WhatsApp OTP, because no one above me can reset it.
+**Acceptance criteria:**
+- Given the owner requests recovery, then a WhatsApp OTP (valid 5 minutes, 3 wrong tries invalidate it) is sent to the registered mobile.
+- Given a correct OTP, then the owner sets a new PIN (weak PINs rejected), but it takes effect only after a **24-hour cooling-off period** (protects against a thief holding the owner's phone).
+- During cooling-off, the old PIN keeps working, and the owner's logged-in devices and the manager receive "Owner PIN is being reset. Cancel if this wasn't you". Cancelling from a logged-in device stops the reset.
+- Given the new PIN takes effect, then all older sessions end.
+- Recovery requests are rate limited and never reveal whether the number exists (see FR-AUTH-09).
+- _Draft stub by Claude from Q2 + Saad's Q7 discussion. Saad to review._
+
 
 ### FR-AUTH-06: Deactivate a staff member (takes effect within 1 minute)
+**User story:** As an owner or manager, I want to stop a former employee's access immediately, while keeping everything they entered.
+**Acceptance criteria:**
+- Given an OWNER or MANAGER deactivates a member, then only that **membership** is disabled (other factories are unaffected) and the user's tokens for this tenant stop working **within 1 minute**.
+- A MANAGER cannot deactivate the OWNER; nobody can deactivate the last OWNER.
+- Past invoices, payments and stock entries stay and keep showing the person's name. Records are **never deleted**.
+- A deactivated member can be reactivated later by an owner or manager.
+- The action is written to the audit log.
+- _Draft stub by Claude from Q5. Saad to review._
+
 <!-- Hint: what happens to their open sessions? Their past invoices? -->
 
 ### FR-AUTH-07: Log out all devices of a user (stolen phone)
+**User story:** As an owner or manager, when a staff member's phone is stolen, I want to log them out of every device at once.
+**Acceptance criteria:**
+- Given an OWNER or MANAGER taps "Log out all devices" for a user, then every token and session issued to that user before now stops working within 1 minute. The user can log in again with their PIN.
+- A MANAGER cannot do this for the OWNER (see `user.sessions.revoke`).
+- The user can also log out all their own devices.
+- Also triggered by FR-AUTH-04 (block old PIN now), FR-AUTH-05 (new PIN takes effect) and FR-AUTH-06 (deactivate).
+- The action is written to the audit log.
+- _Draft stub by Claude from Q2. Saad to review._
+
 
 ### FR-AUTH-08: Switch tenant (users with multiple memberships)
 **User story:** As an accountant working for several factories, I want to switch between them quickly,
