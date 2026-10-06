@@ -1,13 +1,20 @@
 import type { Schema } from 'mongoose';
+import { getTenantId } from './context.js';
 
-// TODO (Saad): a Mongoose plugin so every query on a tenant-owned schema is filtered by tenantId.
-//   - add a required `tenantId` field to the schema
-//   - pre-hooks for find / findOne / updateOne / updateMany / deleteOne / deleteMany / countDocuments
-//     / findOneAndUpdate: add { tenantId: getTenantId() } to the filter
-//   - pre('save'): stamp tenantId from context
-//   - pre('aggregate'): prepend a $match stage
-//   - no tenant in context => throw, so a forgotten filter fails loudly instead of leaking data
-// Laravel comparison: this is a global scope.
-export function tenancyPlugin(_schema: Schema): void {
-  // not implemented
+export function tenancyPlugin(schema: Schema): void {
+  // Every tenant-owned document carries a tenantId.
+  schema.add({ tenantId: { type: String, required: true, index: true } });
+
+  // DONE: stamp the tenant, so callers can never forget it or fake it.
+  // Must be 'validate', not 'save': Mongoose validates BEFORE the save hooks run,
+  // so a 'save' hook would be too late for `required: true`.
+  schema.pre('validate', function () {
+    this.tenantId = getTenantId();
+  });
+
+  // TODO (Saad): query hooks so find / findOne / updateOne / updateMany / deleteOne / deleteMany /
+  //   countDocuments / findOneAndUpdate add { tenantId: getTenantId() } to the filter.
+  //   (Mongoose: schema.pre(['find', ...], function () { this.where(...) }))
+  // TODO (Saad): schema.pre('aggregate', ...) to prepend a $match stage.
+  // TODO (Saad): no tenant in context => getTenantId() throws, so a forgotten filter fails loudly.
 }

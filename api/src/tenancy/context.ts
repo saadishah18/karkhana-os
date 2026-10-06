@@ -1,12 +1,17 @@
-// TODO (Saad): hold the current request's tenantId using AsyncLocalStorage.
-//   runWithTenant(tenantId, fn): runs fn with tenantId available to everything it calls
-//   getTenantId(): returns it, or throws if there is no tenant in context
-// Hint: node:async_hooks. Think of it as a "thread-local" for async code.
+import { AsyncLocalStorage } from 'node:async_hooks';
 
-export function runWithTenant<T>(_tenantId: string, _fn: () => T): T {
-  throw new Error('not implemented');
+// One store for the whole process. Each runWithTenant() call gets its OWN value inside it,
+// even when many requests are in flight at the same time (a plain global variable would be shared).
+const storage = new AsyncLocalStorage<{ tenantId: string }>();
+
+// Runs fn with tenantId available to everything fn calls, including after any await.
+export function runWithTenant<T>(tenantId: string, fn: () => T): T {
+  return storage.run({ tenantId }, fn);
 }
 
+// Returns the current tenant, or throws: a missing tenant must fail loudly, never fall back to "all".
 export function getTenantId(): string {
-  throw new Error('not implemented');
+  const store = storage.getStore();
+  if (!store) throw new Error('No tenant in context');
+  return store.tenantId;
 }
