@@ -136,7 +136,7 @@ Each row is a **permission**; code checks `can('<permission>')`, never role name
 3. **Separation of duties.** Whoever creates a money or stock record cannot cancel or write it off alone
    (invoice reversal, stock write-off).
 4. **Rule C (no privilege escalation):** a user can only grant roles *below* their own. Nobody can grant OWNER.
-   _Proposed by Claude. Saad to confirm._
+   _Confirmed by Saad 2026-10-07._
 5. **Rule B (ownership transfer):** only the current owner can transfer ownership, confirmed by WhatsApp OTP.
    If the owner is unavailable (sold / deceased), a PLATFORM_ADMIN transfers it after manual document
    verification. This is a support process, not an in-app feature, for the MVP.
@@ -182,7 +182,29 @@ Each row is a **permission**; code checks `can('<permission>')`, never role name
 **Out of scope (MVP):** "remember this device", biometric / fingerprint login.
 
 ### FR-AUTH-03: Owner / manager invites a staff member (WhatsApp link, staff sets own PIN)
-<!-- Hint: how long is the invite link valid? What if the mobile already has a user? Rule C. -->
+**User story:** As a factory owner or manager, I want to invite a staff member by WhatsApp so that they can
+set their own PIN and start work, without me ever knowing or choosing their PIN.
+**Acceptance criteria:**
+- Given an OWNER or MANAGER enters name, mobile and role, when they send the invite, then a WhatsApp link is
+  sent to that mobile and the invite is shown as "pending". Munshi, store keeper and accountant cannot invite.
+- Given a MANAGER invites, then only roles **below MANAGER** can be chosen; nobody can ever invite an OWNER
+  (**Rule C**, prevents **privilege escalation**). An OWNER can invite any role except OWNER.
+- Given the link is opened **within 24 hours** and has not been used, when the staff member sets a PIN
+  (weak PINs rejected, see FR-AUTH-09), then their user and membership are activated and the link stops working.
+- Given the link is older than 24 hours, then it shows "This invite has expired. Ask your factory owner to
+  send a new one."
+- Given the link was already used (**single-use token**), then it shows "This invite link has already been used.
+  If you already set your PIN, log in. Otherwise ask your factory owner for a new invite." It never says
+  whether the account exists.
+- Given the mobile already belongs to an existing user (e.g. Tariq sahab), then the invite page **never offers
+  "create PIN"** (prevents **account takeover**). The user logs in with their own PIN, sees
+  "<Factory> invites you as <Role>. Accept / Decline", and Accept only adds a membership to the existing user.
+- Given a wrong number (typo), then the inviter sees the same "Invite sent" result whether or not the number is
+  registered (prevents **user enumeration**); the real person simply never accepts, and the manager can cancel
+  the pending invite and send a new one.
+- Given a new user opens the link, then the mobile is confirmed with a WhatsApp OTP before the PIN is set.
+
+**Out of scope (MVP):** bulk invites, invites by SMS or email.
 
 ### FR-AUTH-04: Owner / manager resets a staff member's PIN
 
