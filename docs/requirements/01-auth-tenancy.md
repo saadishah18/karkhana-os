@@ -207,6 +207,23 @@ set their own PIN and start work, without me ever knowing or choosing their PIN.
 **Out of scope (MVP):** bulk invites, invites by SMS or email.
 
 ### FR-AUTH-04: Owner / manager resets a staff member's PIN
+**User story:** As a factory owner or manager, I want to help a staff member who forgot their PIN, so that
+they can get back to work without me ever knowing their PIN.
+**Acceptance criteria:**
+- Given an OWNER or MANAGER taps "Reset PIN" for a staff member, then a WhatsApp **reset link** is sent
+  (same rules as an invite: **single-use**, expires after **24 hours**). The staff member sets their own PIN.
+  Nobody else ever sets or sees a PIN (**non-repudiation**: every entry can only have been made by its owner).
+- A MANAGER cannot reset the OWNER's PIN (see `staff.pin.reset`). The owner uses FR-AUTH-05.
+- Given the reset screen, then it has a checkbox **"Block the old PIN now (phone lost or stolen)"**, unticked
+  by default.
+  - Unticked: the old PIN keeps working until the new PIN is set (the user may have just remembered it, and a
+    mistaken tap must not lock out a working employee).
+  - Ticked: the old PIN stops working immediately and all of the user's devices are logged out (see FR-AUTH-07).
+- Given the new PIN is set from the link, then the old PIN stops working and all older sessions end.
+- Given the link is expired or already used, then it shows the same messages as FR-AUTH-03.
+- Every reset is written to the audit log (who reset, for whom, when, whether the old PIN was blocked).
+
+**Out of scope (MVP):** SMS delivery, temporary PINs.
 
 ### FR-AUTH-05: Owner recovers own PIN via WhatsApp OTP
 
